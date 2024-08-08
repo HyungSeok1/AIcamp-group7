@@ -9,8 +9,9 @@ from openai import OpenAI
 import base64
 import json
 import urllib.parse
+from streamlit_chat import message as st_message
 
-
+cur_visa = "e9 VISA"
 if 'expiry_date' not in st.session_state:
     st.session_state.expiry_date = 0
 if 'score' not in st.session_state:
@@ -100,8 +101,7 @@ def get_stay_expiration_date(passport_no, nationality, birth_date, token, countr
         st.write(f"Error: {response.status_code} - {response.text}")
         return None
     
-# Show title and description.
-
+# Set pate config
 st.set_page_config(
     page_title="Foreign Worker Chatbot Consultation",
     page_icon="🤖",
@@ -120,7 +120,7 @@ st.markdown(
     
     <style>
         .main {
-            background-color: #f2f2f2;
+            background-color: #ffffff;
             padding: 20px;
             border-radius: 10px;
             font-family: 'Arial', sans-serif;
@@ -130,40 +130,18 @@ st.markdown(
             border: 2px solid #6E6E6E;  /* 테두리 색상 */
             border-radius: 5px;  /* 모서리 둥글게 */
             padding: 0px;  /* 패딩 */
-        }
-        .chat-bubble {
-            max-width: 60%;
-            padding: 10px;
-            margin: 10px;
-            border-radius: 10px;
-            display: inline-block;
-            word-wrap: break-word;
-        }
-        .user-bubble {
-            background-color: #dcf8c6;
-            float: right;
-            clear: both;
-            text-align: right;
-        }
-        .assistant-bubble {
-            background-color: #f1f0f0;
-            float: left;
-            clear: both;
-        }
+        }a
         .message-container {
             overflow: auto;
         }
-        .stChatMessage {
-            text-align: left;
+        button[kind="primary"] {
+        background-color: #81BEF7;
+        border: #81BEF7;
         }
-        
-        
-    
     </style>
     """,
     unsafe_allow_html=True
 )
-
 
 
 #flag = 시나리오 단계
@@ -379,9 +357,9 @@ else:
                 st.session_state.translations['immigration_violation'] = get_score_translation[14]
 
             # 소득수준
-            msg = st.session_state.translations['income']
-            with st.chat_message("assistant", avatar="🧐"):
-                st.markdown(msg)      
+            msg = st.session_state.translations['income'] 
+            with st.chat_message("assistant", avatar="https://img.icons8.com/emoji/48/face-with-monocle.png"):
+                st.markdown(msg)     
             income = st.radio(
                 "",
                 ["0~2500만원", "2500~3499만원", "3500~4999만원", "5000만원 이상"],
@@ -399,8 +377,8 @@ else:
 
             # 한국어 능력
             msg = st.session_state.translations['korean_ability']
-            with st.chat_message("assistant", avatar="🧐"):
-                st.markdown(msg,)        
+            with st.chat_message("assistant", avatar="https://img.icons8.com/emoji/48/face-with-monocle.png"):
+                st.markdown(msg)       
             korean_ability = st.radio(
                 "",
                 ["X", "2급/2단계/41~60점", "3급/3단계/61~80점", "4급/4단계/81점~100점"],
@@ -418,7 +396,7 @@ else:
 
             # 나이
             msg = st.session_state.translations['age']
-            with st.chat_message("assistant", avatar="🧐"):
+            with st.chat_message("assistant", avatar="https://img.icons8.com/emoji/48/face-with-monocle.png"):
                 st.markdown(msg)
             age = st.radio(
                 " ",
@@ -439,7 +417,7 @@ else:
 
             # 가점
             msg = st.session_state.translations['points']
-            with st.chat_message("assistant", avatar="🧐"):
+            with st.chat_message("assistant", avatar="https://img.icons8.com/emoji/48/face-with-monocle.png"):
                 st.markdown(msg)
 
             plus1 = st.checkbox(st.session_state.translations['central_recommendation'])
@@ -472,7 +450,7 @@ else:
 
             # 감점
             msg = st.session_state.translations['penalty']
-            with st.chat_message("assistant", avatar="🧐"):
+            with st.chat_message("assistant", avatar="https://img.icons8.com/emoji/48/face-with-monocle.png"):
                 st.markdown(msg)
 
             minus1 = st.checkbox(st.session_state.translations['fine'],key="minus1")
@@ -519,7 +497,7 @@ else:
 
             submitted = st.button(st.session_state.button[6], type = "primary")
             if submitted:                  
-                with st.chat_message("assistant", avatar="😮"):
+                with st.chat_message("assistant", avatar="https://img.icons8.com/emoji/48/hushed-face.png"):
                     st.markdown(st.session_state.button[7]+ str(st.session_state.score))
                 st.session_state.flag = "3"
                 st.session_state.result = st.button(st.session_state.button[0], type = "primary")
@@ -571,13 +549,33 @@ else:
                 st.session_state.translations['get_purpose'] = translate("Please enter the purpose of using the service below.")
 
                 msg = st.session_state.translations['get_purpose']
-                with st.chat_message("assistant", avatar="😊"):
-                        st.markdown(msg)
+                bot_avatar_html = f'''
+                <div style="text-align: left;">
+                    <img src="https://img.icons8.com/emoji/48/smiling-face.png" width="50"/>
+                </div>
+                '''
+                st.markdown(bot_avatar_html, unsafe_allow_html=True)
+                st_message(msg, avatar_style="no-avatar")
 
             # Display the existing chat messages via `st.chat_message`.
             for message in st.session_state.messages:
-                with st.chat_message(message["role"], avatar="😊"):
-                    st.markdown(message["content"])
+                if message["role"] == "user":
+                    user_avatar_html = f'''
+                    <div style="text-align: right;">
+                        <img src="https://img.icons8.com/emoji/48/thinking-face.png" width="50"/>
+                    </div>
+                    '''
+                    st.markdown(user_avatar_html, unsafe_allow_html=True)
+                    st_message(message["content"],is_user= True, avatar_style="no-avatar") 
+
+                elif message["role"] == "assistant":
+                    bot_avatar_html = f'''
+                    <div style="text-align: left;">
+                        <img src="https://img.icons8.com/emoji/48/smiling-face.png" width="50"/>
+                    </div>
+                    '''
+                    st.markdown(bot_avatar_html, unsafe_allow_html=True)
+                    st_message(message["content"], avatar_style="no-avatar") 
             
             if 'init3' not in st.session_state:
                 st.session_state.init3 = 1
@@ -590,8 +588,13 @@ else:
             if prompt := st.chat_input(""):
                 # Store and display the current prompt.
                 st.session_state.messages.append({"role": "user", "content": prompt})
-                with st.chat_message("user", avatar="🧒"):
-                    st.markdown(prompt)
+                user_avatar_html = f'''
+                <div style="text-align: right;">
+                    <img src="https://img.icons8.com/emoji/48/thinking-face.png" width="50"/>
+                </div>
+                '''
+                st.markdown(user_avatar_html, unsafe_allow_html=True)
+                st_message(prompt, is_user=True, avatar_style="no-avatar") 
 
                 not_available(st.session_state.messages)
                 if st.session_state.flag == "4" or st.session_state.flag == "5":
@@ -638,8 +641,13 @@ else:
                 )
 
                 #답변생성   
-                with st.chat_message("assistant", avatar="😊"):
-                    st.markdown(answer.choices[0].message.content)
+                bot_avatar_html = f'''
+                <div style="text-align: left;">
+                    <img src="https://img.icons8.com/emoji/48/smiling-face.png" width="50"/>
+                </div>
+                '''
+                st.markdown(bot_avatar_html, unsafe_allow_html=True)
+                st_message(answer.choices[0].message.content, avatar_style="no-avatar")
                 st.session_state.messages.append({"role": "assistant", "content": answer.choices[0].message.content})
 
 
@@ -648,30 +656,35 @@ else:
         def get_answer():
             client = OpenAI(api_key=openai_api_key)
             
-            #점수 기준을 만족하는지의 여부 변수로 설정(get_score함수->score 점수 값으로 변경)
-            if st.session_state.score > 200 :
-                st.session_state.score_b = True
-            else:
-                st.session_state.score_b = False
+            qualifypoint = False
+            assistant_data =""
             
-            #대상자인지 제외대상인지 확인(함수명 임의로 작성)
-            #st.session_state.subject = get_qualification()
+            #점수 기준을 만족하는지의 여부 변수로 설정(get_score함수->score 점수 값으로 변경)
+            if st.session_state.score >= 200 and st.session_state.score <= 800 :
+                st.session_state.score_b = '1'
+            elif st.session_state.score < 200:
+                st.session_state.score_b = '2'
+            else:
+                st.session_state.score_b = '0'
+            
             
             #피상담자의 상황(국가, 현재 비자, 체류 기간, 업종)
-            st.session_state.subjectcase = f"국가: {st.session_state.country}, 현재 비자: {st.session_state.visa_info}, 변경을 원하는 비자: {st.session_state.visacase}, 체류 만료일: {st.session_state.expiry_date}, 한국 방문 목적: {st.session_state.purpose}, 업종: {st.session_state.work}"
+            st.session_state.subjectcase = f"국가: {st.session_state.country}, 현재 비자: {st.session_state.visa_info}, 변경을 원하는 비자: {st.session_state.visacase}, 체류 만료일: {st.session_state.expiry_date}, 한국 방문 목적: {st.session_state.purpose}업종: {st.session_state.work}"
             assistant_data = ""
             
             #제외대상자도 아니고, 점수 요건을 만족하는 경우, 
-            if st.session_state.subject and st.session_state.score_b:
-                assistant_data = f"The processing manual and the description for the visa that needs to be changed is" +st.session_state.visarule+". Since this person has satisfied all the conditions for changing, can you tell me what documents I need to prepare now?"
+            if st.session_state.subject and st.session_state.score_b == '1':
+                qualifypoint = True
+                visarule_data = f"I will tell you the current conditions and circumstances of the user and the Korea's policy related to the visa that the user wants to change. \
+                                The processing manual for the visa that needs to be changed is {st.session_state.visarule}. Can you tell me what documents the user need to prepare now?"
                 
             #제외 대상자이거나, 점수 요건을 만족하지 못하는 경우, 
             #상담사례가 크롤링 처리되어 왔다고 가정(read_consulting 함수, 리턴값:딕셔너리 리스트{content:, result:}) 후 임배딩, 피상담자의 상황 역시 query 임배딩(2번 프로그램에서 받은 변경하고자 하는 비자 또는 추천받은 비자) 
             else:
                 if st.session_state.subject == False:
-                    assistant_data = "This foreigner is currently excluded from visa change and cannot change his/her visa. This must be printed unconditionally."
-                if st.session_state.score == False:
-                    assistant_data = "Currently, this foreigner cannot change his/her visa because he/she does not meet the visa point requirement. If he/she also meets the visa change exclusion criteria, he/she cannot change his/her visa for both reasons. Please print this message unconditionally."
+                    assistant_data = "User is currently excluded from visa change and cannot change his/her visa. This must be printed."
+                if st.session_state.score_b == '2':
+                    assistant_data = "User cannot change his/her visa because he/she does not meet the visa point requirement. This must be printed."
                 
                 #consulting = read_consulting()
                 consulting = st.session_state.read_consulting_result
@@ -694,32 +707,67 @@ else:
                 k = 3
                 distances, indices = index.search(query,k)
                 indices_list = indices[0].tolist()
-                #for i in indices_list:
+                
+                
                 #    #상위 3개의 상담사례 content를 가져와서 프롬프팅하고 싶은데 어떻게 해야할지?
                 #    assistant_data = assistant_data + "지금 이 사람의 상황과 가장 유사한 3개의 상담사례를 가져왔어. 이 사례를 소개하고, 이 사람이 준비해볼만한 다른 비자를 알려주거나, 시도해볼만한 다른 방법을 알려줘"
                 
-                assistant_data += "이 외국인의 상황과 가장 유사한 3개의 상담사례를 가져왔습니다. 이 사례를 소개하고, 이 사람이 준비해볼만한 다른 비자를 알려주거나, 시도해볼만한 다른 방법을 알려주세요. 사례를 소개할 때 현재 상담자의 상황과 어떤 점이 비슷했는지도 설명해주세요."
+                assistant_data += "사용자의 상황과 가장 유사한 3개의 상담사례를 가져왔습니다. 이 사례를 소개하고, 이 사람이 준비해볼만한 다른 비자를 알려주거나, 시도해볼만한 다른 방법을 알려주세요. 사례를 소개할 때 현재 상담자의 상황과 어떤 점이 비슷했는지도 설명해주세요."
                 for i in indices_list:
                     case = consulting[i]
                     assistant_data += f"상담사례 {i+1}: 문제 - {case['content']}, 결과 - {case['result']} "
 
-            language_message = f"지금부터 출력하는 언어는 모두 {st.session_state.country}의 언어로 출력해줘."                
+            language_message = f"지금부터 출력하는 언어는 반드시 모두 {st.session_state.country}의 언어로 출력해줘."                
             system_message = "You are a foreign job counselor working in Korea. The user is a foreigner who came to you for consultation. \
                                 You have to perform a consultation scenario with the user. The consultation response should start with whether the foreigner can change the desired visa under the current conditions and circumstances in Korea. \
                                 I will tell you the current conditions and circumstances of the foreigner and the Korea's policy related to the visa that the foreigner wants to change. " + assistant_data
             
-            stream = client.chat.completions.create(
+            
+            bot_avatar_html = f'''
+                <div style="text-align: left;">
+                    <img src="https://img.icons8.com/emoji/48/smiling-face.png" width="50"/>
+                </div>
+                '''
+            st.markdown(bot_avatar_html, unsafe_allow_html=True)
+            
+            #기본 상담
+            stream1 = client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
                     {"role": "system", "content": language_message},
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": st.session_state.subjectcase}
                 ],
-                stream = True
+                stream = False
             )
+            st_message( stream1.choices[0].message.content.strip(), avatar_style="no-avatar")
             
-            with st.chat_message("assistant", avatar="😊"):
-                response = st.write_stream(stream)
+            
+            #가능한 경우 visarule 바탕으로 서류 설명
+            if qualifypoint :
+                stream2 = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": language_message},
+                        {"role": "system", "content": visarule_data},
+                        {"role": "user", "content": st.session_state.subjectcase}
+                    ],
+                    stream = False
+                )
+                st_message( stream2.choices[0].message.content.strip(), avatar_style="no-avatar")
+                    
+            #불가능한 경우 assistant_data에 제공되는 상담 사례 설명       
+            if not(qualifypoint):
+                stream3 = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": language_message},
+                    {"role": "system", "content": assistant_data},
+                    {"role": "user", "content": st.session_state.subjectcase}
+                ],
+                stream = False
+                )
+                st_message( stream3.choices[0].message.content.strip(), avatar_style="no-avatar")
 
             return
 
@@ -738,8 +786,13 @@ else:
                 st.session_state.flag = "7"
             if st.session_state.flag == "4":
                 if 'init4' not in st.session_state:
-                    with st.chat_message("assistant", avatar="😆"):
-                        st.markdown(translate("당신은 제외대상에 해당하지 않습니다. 비자 점수를 측정하고 싶으시면 아래 버튼을 눌러주세요"))
+                    bot_avatar_html = f'''
+                    <div style="text-align: left;">
+                        <img src="https://img.icons8.com/emoji/48/partying-face.png" width="50"/>
+                    </div>
+                    '''
+                    st.markdown(bot_avatar_html, unsafe_allow_html=True)
+                    st_message(translate("당신은 제외대상에 해당하지 않습니다. 비자 점수를 측정하고 싶으시면 아래 버튼을 눌러주세요"), avatar_style="no-avatar")
                     st.session_state.init4 = 1
                 see_score = st.button(st.session_state.button[2], type="primary")
                 if see_score:
@@ -747,8 +800,13 @@ else:
                     st.rerun()
             if st.session_state.flag == "5":
                 if 'init5' not in st.session_state:
-                    with st.chat_message("assistant", avatar="😅"):
-                        st.markdown(translate("당신은 제외대상에 해당합니다. 상담결과를 보시려면 아래 버튼을 눌러주세요"))
+                    bot_avatar_html = f'''
+                    <div style="text-align: left;">
+                        <img src="https://img.icons8.com/emoji/48/new-moon-face.png" width="50"/>
+                    </div>
+                    '''
+                    st.markdown(bot_avatar_html, unsafe_allow_html=True)
+                    st_message(translate("당신은 제외대상에 해당합니다. 상담결과를 보시려면 아래 버튼을 눌러주세요"), avatar_style="no-avatar")
                     st.session_state.init5 = 1
                 see_result = st.button(st.session_state.button[0], type="primary")
                 if see_result:
