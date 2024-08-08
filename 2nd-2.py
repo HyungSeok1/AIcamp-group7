@@ -9,15 +9,21 @@ from openai import OpenAI
 import base64
 import json
 import urllib.parse
-import setuptools.dist
 
 
-cur_visa = "e9 VISA"
 if 'expiry_date' not in st.session_state:
     st.session_state.expiry_date = 0
 if 'score' not in st.session_state:
     st.session_state.score = 0
-st.session_state.visarule = ["E-9 비자로 변경하기 위해서는 조건 점수가 400점 이상이어야 합니다.", "E-7-4 비자로 변경하기 위해서는 조건 점수가 800점 이상이어야 합니다.", "점수 조건을 만족하지 못하거나 제외대상자에 해당할 경우, 비자 변경이 어렵습니다."]
+#st.session_state.visarule = ["E-9 비자로 변경하기 위해서는 조건 점수가 400점 이상이어야 합니다.", "E-7-4 비자로 변경하기 위해서는 조건 점수가 800점 이상이어야 합니다.", "점수 조건을 만족하지 못하거나 제외대상자에 해당할 경우, 비자 변경이 어렵습니다."]
+if 'visarule' not in st.session_state:
+    st.session_state.visarule = ""
+    with open('visarule.pickle', 'rb') as f:
+        st.session_state.visarule_data = pickle.load(f)
+    st.session_state.visarule_titles = list(st.session_state.visarule_data.keys())
+    st.session_state.visarule_titles = st.session_state.visarule_titles[:90]
+
+
 st.session_state.read_consulting_result = [{"content": "외국인 배우자와 혼인신고 및 초청 도와주세요", "result":"처음부터 필리핀 주재 한국대사관에 방문하여 혼인신고를 하였더라면 더욱 간단하게 민원업무처리가 되었을 것"},{"content": "미국에서 온 남성의 체류문제" , "result":"가족관계증명서 서류를 준비해서 해결됨"},{"content":"E-9비자에서 E-7-4로 변경하기", "result":"한국어 점수를 높여서 조건점수를 만족시켜서 비자를 변경할 수 있게 됨"},{"content": "제조업에 종사하는 여성의 비자 연장", "result":"보건증을 발급하여 해결됨"}]
 if 'visacase' not in st.session_state:
     st.session_state.visacase = ""
@@ -26,9 +32,33 @@ if 'changevisa' not in st.session_state:
 
 if 'result' not in st.session_state:
     st.session_state.result = False
-if 'flag2' not in st.session_state:
-    st.session_state.flag2 = "0"
 
+
+def get_visarule_case(indices):
+    # '외교(A-1)', '공무(A-2)', '협정(A-3)', ' 협정(A-3)자격 소지자의 체류자격외 활동 범위', '사증면제(B-1)', '관광통과(B-2)', '일시취재(C-1)', '단기방문(C-3)', '단기취업(C-4)', '문화예술(D-1)', '유학(D-2)', '외국인유학생 시간제 취업(아르바이트)', '산업연수(D-3)', '일반연수(D-4)', '취재(D-5)', '종 교(D-6)', '주 재(D-7)', '필수전문인력', '기업투자(D-8)', '개인 납세사실증명원', '무역경영(D-9)', '구직(D-10)', '교 수(E-1)', '회화지도(E-2)', '연 구(E-3)', '기술지도(E-4)', '전문직업(E-5)', '예술흥행(E-6)',
+    #  '특정활동(E-7)', '계절근로(E-8)', '비전문취업(E-9)', '선원취업(E-10)', '방문동거(F-1)', '거 주(F-2)', 'F-2-8', '공익사업투자 외국인에 대한 거주(F-2-9) 체류자격 변경허가', '동반(F-3)', '영 주(F-5)', '결혼이민(F-6)', '기 타(G-1)', '1. 산재보상진행 불법체류자등에 대한 기타(G-1-1) 체류자격 변경허가', '관광취업(H-1)'
+    #제목이 내용 보다 1단계 느림(적음), 제목 + 1 = 내용
+    res = ""
+    for i in indices[0]:
+        if i in [10, 11, 14, 15, 16, 17, 18, 19, 22, 23, 24, 25, 30, 31, 32, 33, 34, 35, 36, 37, 76, 77, 78, 79, 83, 84, 85, 88]: 
+            res += str(st.session_state.visarule_data[st.session_state.visarule_titles[i-1]]) + "\n"
+        if i == 12 or i== 13: #협정(A-3), 협정(A-3)자격 소지자의 체류자격외 활동 범위
+            res += str(st.session_state.visarule_data[st.session_state.visarule_titles[11]]) + "\n" + str(st.session_state.visarule_data[st.session_state.visarule_titles[12]]) + "\n"
+        elif i == 20 or i == 21: #유학(D-2)
+            res += str(st.session_state.visarule_data[st.session_state.visarule_titles[19]]) + "\n" + str(st.session_state.visarule_data[st.session_state.visarule_titles[20]]) + "\n"
+        elif i == 26 or i == 27: #주 재(D-7)
+            res += str(st.session_state.visarule_data[st.session_state.visarule_titles[25]]) + "\n" + str(st.session_state.visarule_data[st.session_state.visarule_titles[26]]) + "\n"
+        elif i == 28 or i == 29: #기업투자(D-8), 개인 납세사실증명원
+            res += str(st.session_state.visarule_data[st.session_state.visarule_titles[27]]) + "\n" + str(st.session_state.visarule_data[st.session_state.visarule_titles[28]]) + "\n"
+        elif i >= 38 and i <= 75:  #특정활동(E-7)
+            res += str(st.session_state.visarule_data[st.session_state.visarule_titles[37]]) + "\n" + str(st.session_state.visarule_data[st.session_state.visarule_titles[38]]) + "\n"
+            if i >= 40 and i <= 75:
+                res += str(st.session_state.visarule_data[st.session_state.visarule_titles[i-1]]) + "\n"
+        elif i == 80 or i == 81 or i == 82: #거 주(F-2), F-2-8, 공익사업투자 외국인에 대한 거주(F-2-9) 체류자격 변경허가
+            res += str(st.session_state.visarule_data[st.session_state.visarule_titles[79]]) + "\n" + str(st.session_state.visarule_data[st.session_state.visarule_titles[80]]) + "\n" + str(st.session_state.visarule_data[st.session_state.visarule_titles[81]]) + "\n"
+        elif i == 86 or i == 87: #기 타(G-1), 1. 산재보상진행 불법체류자등에 대한 기타(G-1-1) 체류자격 변경허가
+            res += str(st.session_state.visarule_data[st.session_state.visarule_titles[85]]) + "\n" + str(st.session_state.visarule_data[st.session_state.visarule_titles[86]]) + "\n"
+    return res
 
 #08/07에 발급, 일주일 후 만료
 client_id = '1f6fc21d-e1b4-4a8c-b0b0-dcbd559d7297'
@@ -150,9 +180,9 @@ else:
     if st.session_state.country:
         def translate(msg):
             client = OpenAI(api_key=openai_api_key)
-            message = "translate " + msg + " into " + st.session_state.country + "'s language each in comma units and only tell me that translation separated by commas. " 
+            message = "Translate the following ';'-separated list " + msg + " into " + st.session_state.country + "'s language and only tell me that translation. Provide the translation as a ';'-separated list. If there isn't any ';', then you don't have to split it into ';'" 
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 messages=[
                     {"role": "assistant", "content": message}
                 ],
@@ -163,9 +193,9 @@ else:
 
         if 'translations' not in st.session_state:
             st.session_state.translations = {}
-            st.session_state.translations['nationality_translation'] = translate("0:러시아,1:몽골,2:미국,3:베트남,4:인도,5:인도네시아,6:일본,7:중국,8:태국,9:필리핀,10:한국계 러시아인,11:한국계 중국인,99:기타,국적,상담결과보기,다시 채팅하기")
-            st.session_state.translations['button'] = translate("상담 결과보기, 다시 채팅하기, 비자 점수 측정하기")
-            st.session_state.button = st.session_state.translations['button'].split(",")
+            st.session_state.translations['nationality_translation'] = translate("0:러시아;1:몽골;2:미국;3:베트남;4:인도;5:인도네시아;6:일본;7:중국;8:태국;9:필리핀;10:한국계 러시아인;11:한국계 중국인;99:기타;국적;상담결과보기;다시 채팅하기")
+            st.session_state.translations['button'] = translate("상담 결과보기; 다시 채팅하기; 비자 점수 측정하기; 조회 중...; 당신은 현재 체류중인 외국인이 아닙니다.; 모든 정보를 입력해주세요.;제출; 점수")
+            st.session_state.button = st.session_state.translations['button'].split(";")
 
         def get_passport_expiry(info):
             if token:
@@ -185,7 +215,7 @@ else:
 
             # 국적
             nationality_translation = st.session_state.translations['nationality_translation']
-            nationality_translation = nationality_translation.split(",")
+            nationality_translation = nationality_translation.split(";")
             # 국적
             if nationality := st.selectbox('🌏'+nationality_translation[13], [
                 nationality_translation[0], nationality_translation[1],
@@ -229,7 +259,7 @@ else:
             
             # 조회
             if st.button(st.session_state.translations['expire']):
-                with st.spinner(translate("조회 중...")):
+                with st.spinner(st.session_state.button[3]):
                     if st.session_state.passport_no and st.session_state.nationality and st.session_state.birth_date:
                         info = {
                             "organization": "0001",
@@ -243,9 +273,9 @@ else:
                             st.success(translate(f"체류만료일: {expiry_date}"))
                             st.session_state.expiry_date = expiry_date
                         else:
-                            st.error(translate("당신은 현재 체류중인 외국인이 아닙니다."))
+                            st.error(st.session_state.button[4])
                     else:
-                        st.error(translate("모든 정보를 입력해주세요."))
+                        st.error(st.session_state.button[5])
 
 
         def user_info():
@@ -261,8 +291,8 @@ else:
                 st.session_state.work = ""
             if 'init2' not in st.session_state:
                 st.session_state.init2 = 1
-                user_info_translation = translate("현재 비자가 있나요?,있음,없음, 현재 비자는 무엇입니까?,체류만료일을 조회하세요!,체류만료일 조회,한국 방문 목적을 입력하세요!,희망하는 직업/분야를 입력하세요!,여권 번호,국적,나라명,생년월일,정보를 입력하세요:")
-                user_info_translation = user_info_translation.split(",")
+                user_info_translation = translate("현재 비자가 있나요?;있음;없음; 현재 비자는 무엇입니까?;체류만료일을 조회하세요!;체류만료일 조회;한국 방문 목적을 입력하세요!;희망하는 직업/분야를 입력하세요!;여권 번호;국적;나라명;생년월일;정보를 입력하세요:")
+                user_info_translation = user_info_translation.split(";")
                 st.session_state.translations['visa'] = user_info_translation[0]
                 st.session_state.translations['yes'] = user_info_translation[1]
                 st.session_state.translations['no'] = user_info_translation[2]
@@ -308,7 +338,7 @@ else:
             message = "Please output '0' if assistant didn't guide user about the exclusion criteria.Please output '1' if assistant guided user about the exclusion criteria and user answered that he/she is excluded. Please output '2' if assistant guided user about the exclusion criteria and user answered that he/she is not excluded. Exclusion criteria:" + scenario_exclude
             data = "\nassistant와 user의 대화 데이터: "+ str(msg)
             response = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-4o",
                     messages=[
                         {"role": "system", "content": message + data}] + [
                     ],
@@ -330,8 +360,8 @@ else:
                 st.session_state.messages = []
             if 'init' not in st.session_state:
                 st.session_state.init = 1
-                get_score_translation = translate("최근 2년 간의 연간 평균 소득을 선택해주세요(2년 간의 총 소득 / 2),한국어 능력 자격증(TOPIK/KIIP/사전평가) 급수를 선택해주세요,나이를 선택해주세요,가점에 해당되는 요소가 있다면 입력해주세요,중앙부처 추천,광역지자체 추천,고용기업 추천,현 근무처 3년 이상 근속,인구감소 지역 및 읍면 지역 3년 이상 근무,자격증 또는 국내 학위,국내 면허,감점에 해당되는 요소가 있다면 입력해주세요,벌금 100만원 미만의 형을 받은 자,체납으로 체류허가 제한을 받은 사실이 있는 자,출입국관리법 3회 이하 위반자로 행정처분을 받은 자")
-                get_score_translation = get_score_translation.split(",")
+                get_score_translation = translate("최근 2년 간의 연간 평균 소득을 선택해주세요(2년 간의 총 소득 / 2);한국어 능력 자격증(TOPIK/KIIP/사전평가) 급수를 선택해주세요;나이를 선택해주세요;가점에 해당되는 요소가 있다면 입력해주세요;중앙부처 추천;광역지자체 추천;고용기업 추천;현 근무처 3년 이상 근속;인구감소 지역 및 읍면 지역 3년 이상 근무;자격증 또는 국내 학위;국내 면허;감점에 해당되는 요소가 있다면 입력해주세요;벌금 100만원 미만의 형을 받은 자;체납으로 체류허가 제한을 받은 사실이 있는 자;출입국관리법 3회 이하 위반자로 행정처분을 받은 자")
+                get_score_translation = get_score_translation.split(";")
                 st.session_state.translations['income'] = get_score_translation[0]
                 st.session_state.translations['korean_ability'] = get_score_translation[1]
                 st.session_state.translations['age'] = get_score_translation[2]
@@ -487,14 +517,12 @@ else:
                 elif minus3_num == "3회 ~ ":
                     st.session_state.score -= 15
 
-            submitted = st.button("Submit/제출", type = "primary")
+            submitted = st.button(st.session_state.button[6], type = "primary")
             if submitted:                  
                 with st.chat_message("assistant", avatar="😮"):
-                    st.markdown("점수/score : "+ str(st.session_state.score))
+                    st.markdown(st.session_state.button[7]+ str(st.session_state.score))
                 st.session_state.flag = "3"
-                if 'result' not in st.session_state.translations:
-                    st.session_state.translations['result'] = translate("상담결과보기")
-                st.session_state.result = st.button(st.session_state.translations['result'], type = "primary")
+                st.session_state.result = st.button(st.session_state.button[0], type = "primary")
                 if st.session_state.result:
                     st.rerun()
                 return st.session_state.score
@@ -503,9 +531,9 @@ else:
             client = OpenAI(api_key=openai_api_key)
             check_sys = "당신은 외국인 근로자 상담사입니다. 서비스 이용 목적이 비자연장과 비자변경 중에 무엇인지 파악해야합니다. 사용자의 목적이 비자 연장이라고 판단되면 'extend'을 출력하고, 비자 변경이라면 'change'을 출력하세요"
             response_check = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 messages=[
-                    {"role": "system", "content": check_sys +  "사용자의 현재 비자:"+cur_visa + "사용자의 사용 언어:"+st.session_state.country}] +
+                    {"role": "system", "content": check_sys +  "사용자의 현재 비자:"+st.session_state.visa_info + "사용자의 사용 언어:"+st.session_state.country}] +
                     [{"role": "user", "content": msg}
                 ],
                 stream=False,
@@ -513,22 +541,31 @@ else:
             response_check_msg = response_check.choices[0].message.content
             return response_check_msg
 
-
+        def get_embedding(input):
+            client = OpenAI(api_key=openai_api_key)
+            reponse = client.embeddings.create(
+                input = input,
+                model = "text-embedding-3-small"
+            )
+            embeddings = [data.embedding for data in reponse.data]
+            return embeddings    
+        
 
 
         def get_purpose():
             client = OpenAI(api_key=openai_api_key)
-            st.session_state.subjectcase = f"국가: {st.session_state.country}, 현재 비자: {st.session_state.visa_info}, 변경을 원하는 비자: {st.session_state.visacase}, 체류 만료일: {st.session_state.expiry_date}, 업종: {st.session_state.work}"
+            st.session_state.subjectcase = f"국가: {st.session_state.country}, 현재 비자: {st.session_state.visa_info}, 변경을 원하는 비자: {st.session_state.visacase}, 체류 만료일: {st.session_state.expiry_date}, 한국 방문 목적: {st.session_state.purpose}, 업종: {st.session_state.work}"
 
             #system 프롬프트 설정
             scenario_purpose_sys = f"당신은 외국인 근로자 상담사입니다. user은 한국에서 일하고 있는 근로자이며, 당신에게 한국에서 일하면서 필요한 정보들을 물어보고자 합니다. 사용자 정보 {st.session_state.subjectcase}를 참고해서 사용자의 국가의 언어로 친절하게 대답해주세요"
             scenario_purpose_change = "The user wants to change his/her visa. First, you need to find out the type of visa the user wants to change by asking questions. Once you have found out, tell him/her the exclusion conditions for the visa he/she wants to change and ask him/her if he/she is excluded. Ask user to answer whether user is excluded or not"
             scenario_purpose_extend = "사용자가 비자의 연장을 원하고 있습니다. 연장하고자 하는 비자의 종류와 그 방법을 출력하세요."
-            scenario_exclude = "E-7-4(e74) VISA의 제외대상: 벌금 100만원 이상의 형을 받은 자, 조세 체납자(완납 시 신청 가능), 출입국관리법 4회 이상 위반자, \
-                불법체류 경력자, 대한민국의 이익이나 공공의 안전 등을 해치는 행동을 할 염려가 있다고 인정할 만한 자, 경제질서 또는 사회질서를 해치거나 선량한 풍속 등을 해치는 행동을 할 염려가 있다고 인정할 만한 자"
+            # scenario_exclude = "E-7-4(e74) VISA의 제외대상: 벌금 100만원 이상의 형을 받은 자, 조세 체납자(완납 시 신청 가능), 출입국관리법 4회 이상 위반자, \
+            #     불법체류 경력자, 대한민국의 이익이나 공공의 안전 등을 해치는 행동을 할 염려가 있다고 인정할 만한 자, 경제질서 또는 사회질서를 해치거나 선량한 풍속 등을 해치는 행동을 할 염려가 있다고 인정할 만한 자.\n"
+            scenario_exclude = "You can find the exclusion conditions and the description for the visa that user want to change in here:" + st.session_state.visarule + "\nE-7-4(e74) VISA의 제외대상: 벌금 100만원 이상의 형을 받은 자, 조세 체납자(완납 시 신청 가능), 출입국관리법 4회 이상 위반자, \
+                불법체류 경력자, 대한민국의 이익이나 공공의 안전 등을 해치는 행동을 할 염려가 있다고 인정할 만한 자, 경제질서 또는 사회질서를 해치거나 선량한 풍속 등을 해치는 행동을 할 염려가 있다고 인정할 만한 자.\n"
 
-
-            if "messages" not in st.session_state:
+            if "messages" not in st.session_state:  
                 st.session_state.messages = []
             if 'get_purpose' not in st.session_state.translations:
                 st.session_state.translations['get_purpose'] = translate("Please enter the purpose of using the service below.")
@@ -564,6 +601,21 @@ else:
                 response = check_response(prompt)
                 if st.session_state.changevisa == 1:
                     st.session_state.visacase = prompt
+                    #visa_rule 임배딩
+                    db_vectors = []
+                    db_vectors = np.array(get_embedding(st.session_state.visarule_titles))
+                    query1 = np.array(get_embedding(st.session_state.visa_info))
+                    query2 = np.array(get_embedding(st.session_state.visacase))
+                    
+                    d = db_vectors.shape[1]
+                    index = faiss.IndexFlatL2(d)
+                    index.add(db_vectors)
+                    
+                    k = 3
+                    distances, indices = index.search(query1,k)
+                    st.session_state.visarule = get_visarule_case(indices)
+                    distances, indices = index.search(query2,k)
+                    st.session_state.visacase += get_visarule_case(indices)
                     st.session_state.changevisa  = 0
                 #확인 후 대처
                 if response == "extend":
@@ -576,9 +628,9 @@ else:
 
                 #목적에 맞춰서 질문을 생성
                 answer = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 messages=[
-                {"role": "system", "content": st.session_state.system_content+"사용자의 현재 비자:"+cur_visa + "사용자의 사용 언어:"+st.session_state.country}] + [
+                {"role": "system", "content": st.session_state.system_content+"사용자의 현재 비자:"+ st.session_state.visa_info + "사용자의 사용 언어:"+st.session_state.country}] + [
                 {"role": m["role"], "content": m["content"]}
                 for m in st.session_state.messages
                 ],
@@ -592,14 +644,7 @@ else:
 
 
                 
-        def get_embedding(input):
-            client = OpenAI(api_key=openai_api_key)
-            reponse = client.embeddings.create(
-                input = input,
-                model = "text-embedding-3-small"
-            )
-            embeddings = [data.embedding for data in reponse.data]
-            return embeddings    
+
         def get_answer():
             client = OpenAI(api_key=openai_api_key)
             
@@ -613,25 +658,12 @@ else:
             #st.session_state.subject = get_qualification()
             
             #피상담자의 상황(국가, 현재 비자, 체류 기간, 업종)
-            st.session_state.subjectcase = f"국가: {st.session_state.country}, 현재 비자: {st.session_state.visa_info}, 변경을 원하는 비자: {st.session_state.visacase}, 체류 만료일: {st.session_state.expiry_date}, 업종: {st.session_state.work}"
+            st.session_state.subjectcase = f"국가: {st.session_state.country}, 현재 비자: {st.session_state.visa_info}, 변경을 원하는 비자: {st.session_state.visacase}, 체류 만료일: {st.session_state.expiry_date}, 한국 방문 목적: {st.session_state.purpose}, 업종: {st.session_state.work}"
             assistant_data = ""
             
             #제외대상자도 아니고, 점수 요건을 만족하는 경우, 
-            #비자변경 pdf가 ocr 처리되어 왔다고 가정(road_visa 함수) 후 임배딩, 원하는 비자 변경 case 역시 query 임배딩(2번 프로그램에서 받은 변경하고자 하는 비자 또는 추천받은 비자)
             if st.session_state.subject and st.session_state.score_b:
-                #visa_rule 임배딩
-                #db_vectors = get_embedding(road_visa())
-                db_vectors = []
-                db_vectors = np.array(get_embedding(st.session_state.visarule))
-                query = np.array(get_embedding(st.session_state.visacase))
-                
-                d = db_vectors.shape[1]
-                index = faiss.IndexFlatL2(d)
-                index.add(db_vectors)
-                
-                k = 1
-                distances, indices = index.search(query,k)
-                assistant_data = f"The processing manual for the visa that needs to be changed is {st.session_state.visarule[indices[0][0]]}. Since this person has satisfied all the conditions for changing, can you tell me what documents I need to prepare now?"
+                assistant_data = f"The processing manual and the description for the visa that needs to be changed is" +st.session_state.visarule+". Since this person has satisfied all the conditions for changing, can you tell me what documents I need to prepare now?"
                 
             #제외 대상자이거나, 점수 요건을 만족하지 못하는 경우, 
             #상담사례가 크롤링 처리되어 왔다고 가정(read_consulting 함수, 리턴값:딕셔너리 리스트{content:, result:}) 후 임배딩, 피상담자의 상황 역시 query 임배딩(2번 프로그램에서 받은 변경하고자 하는 비자 또는 추천받은 비자) 
@@ -673,11 +705,11 @@ else:
 
             language_message = f"지금부터 출력하는 언어는 모두 {st.session_state.country}의 언어로 출력해줘."                
             system_message = "You are a foreign job counselor working in Korea. The user is a foreigner who came to you for consultation. \
-                                You have to perform a consultation scenario with the user. The consultation response should start with whether the foreigner can change the desired visa under the current conditions and circumstances. \
-                                I will tell you the current conditions and circumstances of the foreigner and the policy related to the visa that the foreigner wants to change. " + assistant_data
+                                You have to perform a consultation scenario with the user. The consultation response should start with whether the foreigner can change the desired visa under the current conditions and circumstances in Korea. \
+                                I will tell you the current conditions and circumstances of the foreigner and the Korea's policy related to the visa that the foreigner wants to change. " + assistant_data
             
             stream = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4o",
                 messages=[
                     {"role": "system", "content": language_message},
                     {"role": "system", "content": system_message},
