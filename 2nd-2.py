@@ -11,11 +11,10 @@ import json
 import urllib.parse
 from streamlit_chat import message as st_message
 
-cur_visa = "e9 VISA"
 if 'expiry_date' not in st.session_state:
     st.session_state.expiry_date = 0
 if 'score' not in st.session_state:
-    st.session_state.score = 0
+    st.session_state.score = 800
 #st.session_state.visarule = ["E-9 비자로 변경하기 위해서는 조건 점수가 400점 이상이어야 합니다.", "E-7-4 비자로 변경하기 위해서는 조건 점수가 800점 이상이어야 합니다.", "점수 조건을 만족하지 못하거나 제외대상자에 해당할 경우, 비자 변경이 어렵습니다."]
 if 'visarule' not in st.session_state:
     st.session_state.visarule = ""
@@ -24,8 +23,7 @@ if 'visarule' not in st.session_state:
     st.session_state.visarule_titles = list(st.session_state.visarule_data.keys())
     st.session_state.visarule_titles = st.session_state.visarule_titles[:90]
 
-
-st.session_state.read_consulting_result = [{"content": "외국인 배우자와 혼인신고 및 초청 도와주세요", "result":"처음부터 필리핀 주재 한국대사관에 방문하여 혼인신고를 하였더라면 더욱 간단하게 민원업무처리가 되었을 것"},{"content": "미국에서 온 남성의 체류문제" , "result":"가족관계증명서 서류를 준비해서 해결됨"},{"content":"E-9비자에서 E-7-4로 변경하기", "result":"한국어 점수를 높여서 조건점수를 만족시켜서 비자를 변경할 수 있게 됨"},{"content": "제조업에 종사하는 여성의 비자 연장", "result":"보건증을 발급하여 해결됨"}]
+st.session_state.read_consulting_result = []
 if 'visacase' not in st.session_state:
     st.session_state.visacase = ""
 if 'changevisa' not in st.session_state:
@@ -33,6 +31,18 @@ if 'changevisa' not in st.session_state:
 
 if 'result' not in st.session_state:
     st.session_state.result = False
+    
+#크롤링 데이터 st.session_state.read_consulting_result에 불러오기 
+with open("crawling_data.pickle", "rb") as f:
+    data = pickle.load(f)
+
+#print(data.keys())
+#print(data['중도 퇴사 후 근로소득 신고되지 않아 고용허가연장 안된 노동자 지원'])
+
+for i in data.keys():
+    cstContent, cstResult, cstLaw, cstEval = data[i]
+    dict = {"title": i, "content": cstContent, "result": cstResult, "law": cstLaw, "evaluation": cstEval}
+    st.session_state.read_consulting_result.append(dict)
 
 
 def get_visarule_case(indices):
@@ -60,7 +70,6 @@ def get_visarule_case(indices):
         elif i == 86 or i == 87: #기 타(G-1), 1. 산재보상진행 불법체류자등에 대한 기타(G-1-1) 체류자격 변경허가
             res += str(st.session_state.visarule_data[st.session_state.visarule_titles[85]]) + "\n" + str(st.session_state.visarule_data[st.session_state.visarule_titles[86]]) + "\n"
     return res
-
 #08/07에 발급, 일주일 후 만료
 client_id = '1f6fc21d-e1b4-4a8c-b0b0-dcbd559d7297'
 client_secret = '2558d9c9-13d9-4638-8018-51f83a4aab7e'
@@ -538,12 +547,10 @@ else:
             scenario_purpose_sys = f"당신은 외국인 근로자 상담사입니다. user은 한국에서 일하고 있는 근로자이며, 당신에게 한국에서 일하면서 필요한 정보들을 물어보고자 합니다. 사용자 정보 {st.session_state.subjectcase}를 참고해서 사용자의 국가의 언어로 친절하게 대답해주세요"
             scenario_purpose_change = "The user wants to change his/her visa. First, you need to find out the type of visa the user wants to change by asking questions. Once you have found out, tell him/her the exclusion conditions for the visa he/she wants to change and ask him/her if he/she is excluded. Ask user to answer whether user is excluded or not"
             scenario_purpose_extend = "사용자가 비자의 연장을 원하고 있습니다. 연장하고자 하는 비자의 종류와 그 방법을 출력하세요."
-            # scenario_exclude = "E-7-4(e74) VISA의 제외대상: 벌금 100만원 이상의 형을 받은 자, 조세 체납자(완납 시 신청 가능), 출입국관리법 4회 이상 위반자, \
-            #     불법체류 경력자, 대한민국의 이익이나 공공의 안전 등을 해치는 행동을 할 염려가 있다고 인정할 만한 자, 경제질서 또는 사회질서를 해치거나 선량한 풍속 등을 해치는 행동을 할 염려가 있다고 인정할 만한 자.\n"
             scenario_exclude = "You can find the exclusion conditions and the description for the visa that user want to change in here:" + st.session_state.visarule + "\nE-7-4(e74) VISA의 제외대상: 벌금 100만원 이상의 형을 받은 자, 조세 체납자(완납 시 신청 가능), 출입국관리법 4회 이상 위반자, \
                 불법체류 경력자, 대한민국의 이익이나 공공의 안전 등을 해치는 행동을 할 염려가 있다고 인정할 만한 자, 경제질서 또는 사회질서를 해치거나 선량한 풍속 등을 해치는 행동을 할 염려가 있다고 인정할 만한 자.\n"
 
-            if "messages" not in st.session_state:  
+            if "messages" not in st.session_state:
                 st.session_state.messages = []
             if 'get_purpose' not in st.session_state.translations:
                 st.session_state.translations['get_purpose'] = translate("Please enter the purpose of using the service below.")
@@ -683,15 +690,17 @@ else:
             else:
                 if st.session_state.subject == False:
                     assistant_data = "User is currently excluded from visa change and cannot change his/her visa. This must be printed."
+                    st.session_state.subjectcase += ", 제외 대상자: 해당"
                 if st.session_state.score_b == '2':
                     assistant_data = "User cannot change his/her visa because he/she does not meet the visa point requirement. This must be printed."
-                
+                    st.session_state.subjectcase += ", 점수 기준 미달 여부: 해당"
+                    
                 #consulting = read_consulting()
                 consulting = st.session_state.read_consulting_result
                 db_vectors = []
                 for each_data in consulting:
                     #임베딩 과정에 문제 상황과 답변을 다 포함시키기 위한 case 변수
-                    consulting_case = f"문제: {each_data['content']}, 결과: {each_data['result']}"
+                    consulting_case = f"상담 제목: {each_data['title']}, 상담 내용: {each_data['content']}, 상담 결과: {each_data['result']}, 관련 법령: {each_data['law']}, 평가 및 의의: {each_data['evaluation']}"
                     st.consulting_list = []
                     st.consulting_list.append(consulting_case)
                     #consulting 값을 딕셔너리와 임베딩 벡터가 모두 포함된 리스트로 변경
@@ -715,12 +724,11 @@ else:
                 assistant_data += "사용자의 상황과 가장 유사한 3개의 상담사례를 가져왔습니다. 이 사례를 소개하고, 이 사람이 준비해볼만한 다른 비자를 알려주거나, 시도해볼만한 다른 방법을 알려주세요. 사례를 소개할 때 현재 상담자의 상황과 어떤 점이 비슷했는지도 설명해주세요."
                 for i in indices_list:
                     case = consulting[i]
-                    assistant_data += f"상담사례 {i+1}: 문제 - {case['content']}, 결과 - {case['result']} "
+                    assistant_data += f"상담사례 {i+1}: 상담 제목 - {each_data['title']}, 상담 내용 - {each_data['content']}, 상담 결과 - {each_data['result']}, 관련 법령 - {each_data['law']}, 평가 및 의의 - {each_data['evaluation']} "
 
             language_message = f"지금부터 출력하는 언어는 반드시 모두 {st.session_state.country}의 언어로 출력해줘."                
             system_message = "You are a foreign job counselor working in Korea. The user is a foreigner who came to you for consultation. \
-                                You have to perform a consultation scenario with the user. The consultation response should start with whether the foreigner can change the desired visa under the current conditions and circumstances in Korea. \
-                                I will tell you the current conditions and circumstances of the foreigner and the Korea's policy related to the visa that the foreigner wants to change. " + assistant_data
+                                You have to perform a consultation scenario with the user. The consultation response should start with whether the foreigner can change the desired visa under the current conditions and circumstances. " 
             
             
             bot_avatar_html = f'''
@@ -735,7 +743,7 @@ else:
                 model="gpt-4o",
                 messages=[
                     {"role": "system", "content": language_message},
-                    {"role": "system", "content": system_message},
+                    {"role": "system", "content": system_message + "비자정책정보: "+st.session_state.visarule},
                     {"role": "user", "content": st.session_state.subjectcase}
                 ],
                 stream = False
@@ -762,6 +770,7 @@ else:
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": language_message},
+                    {"role": "system", "content": "Please describe the consultation case specifically. Please include the title or content of the consultation, the result, the law, and the evaluation. Please be specific about the situation and how it was resolved."},
                     {"role": "system", "content": assistant_data},
                     {"role": "user", "content": st.session_state.subjectcase}
                 ],
